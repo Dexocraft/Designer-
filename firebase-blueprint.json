@@ -1,0 +1,170 @@
+{
+  "entities": {
+    "CardBackgroundData": {
+      "title": "CardBackgroundData",
+      "description": "Background fill configuration for one side of a business card.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["solid", "gradient"],
+          "description": "Fill style type."
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^#[0-9A-Fa-f]{3,8}$",
+          "description": "Solid hex fill color."
+        },
+        "gradientStart": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^#[0-9A-Fa-f]{3,8}$",
+          "description": "Gradient start hex color."
+        },
+        "gradientEnd": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^#[0-9A-Fa-f]{3,8}$",
+          "description": "Gradient end hex color."
+        },
+        "gradientAngle": {
+          "type": "number",
+          "description": "Gradient angle in degrees (0-360)."
+        }
+      },
+      "required": ["type", "color", "gradientStart", "gradientEnd", "gradientAngle"]
+    },
+    "CardSideData": {
+      "title": "CardSideData",
+      "description": "Design data for either the front or back side of a business card.",
+      "type": "object",
+      "properties": {
+        "background": {
+          "$ref": "#/entities/CardBackgroundData",
+          "description": "Background fill configuration."
+        },
+        "elements": {
+          "type": "array",
+          "description": "Bounded list of up to 40 text or image elements placed on this card side."
+        }
+      },
+      "required": ["background", "elements"]
+    },
+    "CardGuidesData": {
+      "title": "CardGuidesData",
+      "description": "Print guide visibility flags for bleed, trim, and safe zone.",
+      "type": "object",
+      "properties": {
+        "showBleed": {
+          "type": "boolean"
+        },
+        "showTrim": {
+          "type": "boolean"
+        },
+        "showSafeZone": {
+          "type": "boolean"
+        }
+      },
+      "required": ["showBleed", "showTrim", "showSafeZone"]
+    },
+    "SavedCard": {
+      "title": "SavedCard",
+      "description": "A customer-approved business card design saved to Firestore with their contact email when ordering cards.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique card submission identifier."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 254,
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+          "description": "Contact email address entered by the customer."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Display name of the card design."
+        },
+        "sidedness": {
+          "type": "string",
+          "enum": ["single", "double"],
+          "description": "Whether the card is 1-sided or 2-sided."
+        },
+        "orientation": {
+          "type": "string",
+          "enum": ["horizontal", "vertical"],
+          "description": "Physical card orientation."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["submitted"],
+          "description": "Submission state; immutable after creation."
+        },
+        "accepted": {
+          "type": "boolean",
+          "description": "Print proof approval flag."
+        },
+        "destinationUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "TapCard store destination URL opened after saving."
+        },
+        "guides": {
+          "$ref": "#/entities/CardGuidesData",
+          "description": "Print guide display settings."
+        },
+        "front": {
+          "$ref": "#/entities/CardSideData",
+          "description": "Front side card layout."
+        },
+        "back": {
+          "$ref": "#/entities/CardSideData",
+          "description": "Back side card layout."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last-updated timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "name",
+        "sidedness",
+        "orientation",
+        "status",
+        "accepted",
+        "destinationUrl",
+        "guides",
+        "front",
+        "back",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/cards/{cardId}": {
+      "schema": {
+        "$ref": "#/entities/SavedCard"
+      },
+      "description": "Write-once submission dropbox storing customer card designs and email addresses; reads, updates, and deletes are disabled for clients to prevent PII exposure."
+    }
+  }
+}

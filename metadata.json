@@ -1,0 +1,8 @@
+{
+  "name": "TapCard Studio",
+  "description": "Client-side print-ready business card design studio with bleed, trim, and safe-zone guides, freeform canvas editing, localStorage drafts, and 300 DPI PNG/PDF export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

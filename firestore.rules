@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidEmail(email) {
+      return email is string
+        && email.size() >= 5
+        && email.size() <= 254
+        && email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+    }
+
+    function isValidBackground(bg) {
+      return bg is map
+        && bg.keys().hasAll(['type', 'color', 'gradientStart', 'gradientEnd', 'gradientAngle'])
+        && bg.keys().hasOnly(['type', 'color', 'gradientStart', 'gradientEnd', 'gradientAngle'])
+        && bg.type in ['solid', 'gradient']
+        && bg.color is string && bg.color.size() >= 4 && bg.color.size() <= 16 && bg.color.matches('^#[0-9A-Fa-f]{3,8}$')
+        && bg.gradientStart is string && bg.gradientStart.size() >= 4 && bg.gradientStart.size() <= 16 && bg.gradientStart.matches('^#[0-9A-Fa-f]{3,8}$')
+        && bg.gradientEnd is string && bg.gradientEnd.size() >= 4 && bg.gradientEnd.size() <= 16 && bg.gradientEnd.matches('^#[0-9A-Fa-f]{3,8}$')
+        && (bg.gradientAngle is int || bg.gradientAngle is float)
+        && bg.gradientAngle >= 0 && bg.gradientAngle <= 360;
+    }
+
+    function isValidGuides(guides) {
+      return guides is map
+        && guides.keys().hasAll(['showBleed', 'showTrim', 'showSafeZone'])
+        && guides.keys().hasOnly(['showBleed', 'showTrim', 'showSafeZone'])
+        && guides.showBleed is bool
+        && guides.showTrim is bool
+        && guides.showSafeZone is bool;
+    }
+
+    function isValidCardSide(side) {
+      return side is map
+        && side.keys().hasAll(['background', 'elements'])
+        && side.keys().hasOnly(['background', 'elements'])
+        && isValidBackground(side.background)
+        && side.elements is list
+        && side.elements.size() <= 40
+        && (
+          side.elements.size() == 0
+          || (
+            side.elements[0] is map
+            && side.elements[0].keys().hasAll(['id', 'type'])
+            && side.elements[0].id is string
+            && side.elements[0].id.size() >= 1
+            && side.elements[0].id.size() <= 128
+            && side.elements[0].type in ['text', 'image']
+          )
+        );
+    }
+
+    function isValidSavedCard(data) {
+      return data.keys().hasAll([
+          'id',
+          'email',
+          'name',
+          'sidedness',
+          'orientation',
+          'status',
+          'accepted',
+          'destinationUrl',
+          'guides',
+          'front',
+          'back',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id',
+          'email',
+          'name',
+          'sidedness',
+          'orientation',
+          'status',
+          'accepted',
+          'destinationUrl',
+          'guides',
+          'front',
+          'back',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidEmail(data.email)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.sidedness in ['single', 'double']
+        && data.orientation in ['horizontal', 'vertical']
+        && data.status == 'submitted'
+        && data.accepted == true
+        && data.destinationUrl is string && data.destinationUrl.size() >= 1 && data.destinationUrl.size() <= 256
+        && isValidGuides(data.guides)
+        && isValidCardSide(data.front)
+        && isValidCardSide(data.back)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Write-once customer card submission dropbox: clients can submit validated cards with an email
+    // without signing in, while reads/updates/deletes are locked down to prevent PII scraping.
+    match /cards/{cardId} {
+      allow get, list, update, delete: if false;
+
+      allow create: if isValidId(cardId)
+        && isValidSavedCard(incoming())
+        && incoming().id == cardId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+    }
+  }
+}
